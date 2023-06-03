@@ -74,58 +74,82 @@ with open(path, 'r') as f:
 
 
 # ----- функции загрузки грузовика ------
-def items_by_mass(items_lst: list) -> list:  ##### ПЕРЕДЕЛАТЬ НА СПИСОК
+def items_by_mass(items_lst: list) -> list:  ##### можно переделать сразу на словарь, где ключи - имена
     '''Формирует список списков, у которых 0 индекс - общая масса, 1 индекс - КОМБИНАЦИя списка грузов'''
-    res = list()  # список списков [[,[]], [,[]]]
-    box = list()  # список [масса, [комбинация]]
-    combination = list()  # список комбинации []
+    res = list()  # список списков [[1,[a]], [2,[a, b]]]
+    box = list()  # список масса, комбинация [2, [a, b]]
+    combination = list()  # список комбинации [a, b]
 
+    # проход общий с 1 элементом
     for item in items_lst:
         combination.append(item)
         curent_combination = copy.deepcopy(combination)
-        box.append(sum(map(lambda x: x.M, curent_combination)))  # 0 элемент масса
+        box.append(mass_of_group(curent_combination))  # 0 элемент масса
         box.append(curent_combination)  # 1 элемент комбинация
         res.append(box)
-
-
-
-    # for item in items_lst:
-    #     box.append(item)
-    #     curent_box = copy.deepcopy(box)
-    #     res[sum(map(lambda x: x.M, box))] = curent_box
-    # return res
-
-    print(res)
-
-    box = list()
-    for item in items_lst:
-        box.append(item)
-        curent_box = copy.deepcopy(box)
-        res[curent_box[0].M] = curent_box
         box = list()
-    print(res)
 
-    # curent_items_lst = copy.deepcopy(items_lst)
-    # # print(res)
-    # for i in range(len(items_lst)):
-    #     box = list()
-    #     # print(items_lst[i])
-    #     del curent_items_lst[i]
-    #     # print(curent_items_lst)
-    #
-    #     for item in curent_items_lst:
-    #         box.append(item)  # накопитель
-    #         curent_box = copy.deepcopy(box)
-    #         res[sum(map(lambda x: x.M, box))] = curent_box
-    #     curent_items_lst = copy.deepcopy(items_lst)
+    # собрать одиночки кроме 1
+    for item in items_lst[1:]:
+        combination = list()
+        combination.append(item)
+        box.append(mass_of_group(combination))  # 0 элемент масса
+        box.append(combination)  # 1 элемент комбинация
+        res.append(box)
+        box = list()
 
+    # собрать все остальные с выдергиванием по проходу
+    for i in range(len(items_lst)):
+        current_item_lst = copy.deepcopy(items_lst)
+        del current_item_lst[i]
+        combination = list()
+        box = list()
+        for item in current_item_lst:
+            combination.append(item)
+            curent_combination = copy.deepcopy(combination)
+            box.append(mass_of_group(curent_combination))  # 0 элемент масса
+            box.append(curent_combination)  # 1 элемент комбинация
+            res.append(box)
+            box = list()
 
-    return res
+    # добавляем 1 и последнюю
+    box = list()
+    combination = list()
+    combination.append(items_lst[0])
+    combination.append(items_lst[-1])
+    box.append(mass_of_group(combination))  # 0 элемент масса
+    box.append(combination)  # 1 элемент комбинация
+    res.append(box)
+
+    # добавляем предпоследний и последнюю
+    box = list()
+    combination = list()
+    combination.append(items_lst[-2])
+    combination.append(items_lst[-1])
+    box.append(mass_of_group(combination))  # 0 элемент масса
+    box.append(combination)  # 1 элемент комбинация
+    res.append(box)
+
+    # удаляем повторные комбинации
+    res_dct = dict()
+    for comb in res:
+        text = ''
+        for obj in comb[1]:
+            text += obj.name
+        res_dct[text] = comb
+
+    my_list = list(res_dct.values())
+    # print(f'результат {my_list}')
+
+    return my_list
 
 def items_with_max_mass(res: list) -> list:
     '''Возвращает список грузов с максимальной общей массой'''
     max_mass_box_key = max(map(lambda x: x[0], res))
-    return res[max_mass_box_key]
+    for i in res:
+        if i[0] == max_mass_box_key:
+            return i
+
 
 
 def mass_of_group(res: list) -> int:
@@ -147,40 +171,46 @@ def s_of_group(group: list) -> int:
 
 # ----- алгоритм загрузки грузовика ----------------
 
-items_by_mass_dct = items_by_mass(items_lst)  # словарь {масса: группа}
-print(items_by_mass_dct)
+items_by_mass_lst = items_by_mass(items_lst)  # список списков [масса, [группа]]
+print(items_by_mass_lst)
 
 flag = True
 while flag:
-    group = items_with_max_mass(items_by_mass_dct)
-    group_mas = mass_of_group(group)
+    group = items_with_max_mass(items_by_mass_lst)
+    group_mas = group[0]
+
+    print(group_mas, group)
 
     # УСЛОВИЕ ЗАДАЧИ - выбрать группу по МАКСИМАЛЬНОЙ возможной массе
     if truck.M >= group_mas:  # Все ОК
-        # print('point 1')
-        # print(group_mas, group)
 
-        # Фильтруем группу по высоте. СЧИТАЕМ, ЧТО наклонять груз нельзя
-        max_h_from_group = item_max_h_from_group(group)
+        # Фильтруем группу по высоте. СЧИТАЕМ, ЧТО наклонять груз НЕЛЬЗЯ
+        max_h_from_group = item_max_h_from_group(group[1])
         if truck.H >= max_h_from_group: #Все ОК
 
             # Проверяем группу на габариты в горизонтальной плоскости
             tr_s = truck.L * truck.W
-            if tr_s >= s_of_group(group):  # есть шанс все уместить
+            if tr_s >= s_of_group(group[1]):  # есть шанс все уместить
 
                 # ЗДЕСЬ ЛОГИКА ПОВОРОТОВ В ГОРИЗОНТАЛЬНОЙ ПЛОСКОСТИ
-                print(group_mas, group)
+                print(f'ты здесь {group_mas, group}')
 
                 flag = False
 
             else: # нет шанса уместить
-                del items_by_mass_dct[group_mas]
+                items_by_mass_lst.remove(group)
 
         else: # убрать группу с максимальной массой и не проходящей по высоте
-            del items_by_mass_dct[group_mas]
+            items_by_mass_lst.remove(group)
 
     else:  # убрать группу с максимальной массой
-        del items_by_mass_dct[group_mas]
+        items_by_mass_lst.remove(group)
+
+    if len(items_by_mass_lst) == 0:
+        flag = False
+        print('Груз не соответствует ни массе, ни габаритам. Выберите другой груз.')
+
+
 
 
 
