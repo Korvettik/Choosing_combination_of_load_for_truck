@@ -168,6 +168,37 @@ def s_of_group(group: list) -> int:
     s = sum(map(lambda x: x.L * x.W, group)) + truck.W * 50 * (len(group)+1) + truck.L * 50 * 2
     return s
 
+def horizont_combine(group: list) -> list:
+    '''Если в группе грузов находится комбинация горизонтальных поворотов,
+     чтобы умещаться в кузове грузовика - True, если нет - False'''
+    group = group[1]
+    res = True
+    # Считаем, что грузы рядом не ставим. Только в линию.
+
+    # повернем на ширину грузовика те грузы, что возможно
+    turned_group = copy.deepcopy(group)
+    for i in range(len(group)):
+        turned_item = copy.deepcopy(group[i])
+        if group[i].L > group[i].W:
+            turned_item.W = group[i].L
+            turned_item.L = group[i].W
+            turned_group[i] = turned_item
+
+    sum_l = sum(map(lambda x: x.L, group)) + 50 * (len(group)+1)
+    print(f'sum_l {sum_l}')
+    sum_w = sum(map(lambda x: x.W, group)) + 100
+    print(f'sum_w {sum_w}')
+
+    if sum_l > truck.L or sum_w > truck.W:
+        res = False
+
+    return res
+
+
+
+
+
+
 
 # ----- алгоритм загрузки грузовика ----------------
 
@@ -195,12 +226,21 @@ while flag:
                 # ЗДЕСЬ ЛОГИКА ПОВОРОТОВ В ГОРИЗОНТАЛЬНОЙ ПЛОСКОСТИ
                 print(f'ты здесь {group_mas, group}')
 
-                flag = False
+                res_horizont_combine = horizont_combine(group)
+                if res_horizont_combine:
+                    print(f'Загружать эту комбинацию грузов:\nОбщая масса {group[0]}, Комплект {group[1]}')
+                    for item in group[1]:
+                        print(f'Наименование: {item.name}\nДлина: {item.W}\nШирина: {item.L}')
 
-            else: # нет шанса уместить
+                    flag = False
+
+                else:  # комбинации не влезают
+                    items_by_mass_lst.remove(group)
+
+            else:  # нет шанса уместить
                 items_by_mass_lst.remove(group)
 
-        else: # убрать группу с максимальной массой и не проходящей по высоте
+        else:  # убрать группу с максимальной массой и не проходящей по высоте
             items_by_mass_lst.remove(group)
 
     else:  # убрать группу с максимальной массой
@@ -208,7 +248,7 @@ while flag:
 
     if len(items_by_mass_lst) == 0:
         flag = False
-        print('Груз не соответствует ни массе, ни габаритам. Выберите другой груз.')
+        print('Груз не соответствует ни массе, ни габаритам, ни компановке. Выберите другой перечень грузов.')
 
 
 
